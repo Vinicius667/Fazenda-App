@@ -5,20 +5,17 @@ import pickle
 from datetime import *
 import excel_handler
 from gado_func import *
-
-############### generic functions
-
+from tkcalendar import *
 
 
 
 
-#animais_tree_info = pickle.load(open("animais_tree_info.pkl","rb"))
+
 all_animais = pickle.load(open("all_animais.pkl","rb"))
 all_datas = pickle.load(open("all_datas.pkl","rb"))
 animais_data_peso = pickle.load(open("animais_data_peso.pkl","rb"))
 animais_data_peso = {200:animais_data_peso[200],216:animais_data_peso[216]}
-animais_tree_info = []
-animais_tree_info = excel_handler.generate_tree_info(animais_data_peso,animais_tree_info)
+
 
 
 root = Tk()
@@ -36,10 +33,10 @@ root.columnconfigure(0,weight=1)
 frame_machos_pesagens = Frame(root,bg="grey")
 frame_menu = Frame(root,bg="red")
 frame_machos_dados = Frame(root,bg="green")
-frame_vendas = Frame(root,bg="black")
+frame_editar_pesagens = Frame(root,bg="black")
 
 
-frames = (frame_machos_dados,frame_machos_pesagens,frame_vendas,frame_menu)
+frames = (frame_machos_dados,frame_machos_pesagens,frame_editar_pesagens,frame_menu)
 for frame in frames:
     frame.grid(row=0,column=0,sticky="nsew")
 
@@ -52,7 +49,7 @@ b_gado_macho_dados = Button(frame_menu,text="Dados",padx=30,pady=30,command=lamb
 b_gado_macho_dados.place(relx=0.5, rely=0.3, anchor=CENTER)
 b_gado_femea = Button(frame_menu,text="Pesagens",padx=30,pady=30,command=lambda:gotoframe(frame_machos_pesagens))
 b_gado_femea.place(relx=0.5, rely=0.5, anchor=CENTER)
-b_trabalhadores = Button(frame_menu,text="Vendas",padx=30,pady=30,command=lambda:gotoframe(frame_vendas))
+b_trabalhadores = Button(frame_menu,text="Editar pesagens",padx=30,pady=30,command=lambda:gotoframe(frame_editar_pesagens))
 b_trabalhadores.place(relx=0.5, rely=0.7, anchor=CENTER)
 
 
@@ -84,7 +81,6 @@ for frame in frames:
 
 
 macho = Animal(lf_todos_animais,frame_machos_pesagens,animais_data_peso)
-#tree_info = TreeInfo(lf_todos_animais,animais_tree_info)
 
 macho.tree_info.generate_tree(
     ("Animal", "Peso", "Ultima pesagem", "Pesagens", "Engorda"),
@@ -94,25 +90,24 @@ macho.tree_info.fill_tree()
 
 
 
-def tree_info_handler(e):
+def tree_info_handler(e,animal):
     was_selected = what_was_selected_tree(e)
     regiao = was_selected[0]
     if regiao == 'heading':
         coluna = was_selected[1]
-        tree_info_sort_by_heading(macho.tree_info,int(coluna[1:])-1)
+        coluna = int(coluna[1:])-1
+        animal.tree_info.sort_by_heading(coluna)
     elif regiao == "cell":
         cells = was_selected[1]
-        tree_info_selected(cells)
+        tree_info_selected(cells,animal)
 
-def tree_info_selected(cells_selected):
+def tree_info_selected(cells_selected,animal):
     print(f"The animal selected was {cells_selected}")
 
 
-def tree_info_sort_by_heading(tree_info:TreeInfo ,col:int):
-    macho.tree_info.sort_by_heading(col)
 
 
-macho.tree_info.tree.bind("<Double-1>",tree_info_handler)
+macho.tree_info.tree.bind("<Double-1>",lambda e : tree_info_handler(e,macho))
 macho.tree_info.tree.place(relwidth=1,relheight=0.9,rely=0.1)
 
 
@@ -120,7 +115,6 @@ macho.tree_info.tree.place(relwidth=1,relheight=0.9,rely=0.1)
 
 
 
-#tree_dummy = TreeDummy(frame_machos_pesagens)
 
 
 
@@ -131,72 +125,80 @@ macho.tree_dummy.generate_tree(
 
 
 
-macho.tree_dummy.tree.place(relwidth=0.2,relheight=0.9,relx=0.8,rely=0.1)
+macho.tree_dummy.tree.place(relwidth=0.2,relheight=0.9,relx=0.0,rely=0.0)
 
-
+b_selecionar_data = Button(frame_machos_pesagens,text="Selecionar data")
+b_selecionar_data.place(relx=0.5,rely=0.35,anchor=CENTER)
 
 
 
 e_animal = Entry(frame_machos_pesagens)
-e_animal.place(relx=0.4,rely=0.5)
+e_animal.place(relwidth=0.05,relx=0.45,rely=0.5,anchor=CENTER)
 
 e_peso = Entry(frame_machos_pesagens)
-e_peso.place(relx=0.6,rely=0.5)
+e_peso.place(relwidth=0.05,relx=0.55,rely=0.5,anchor=CENTER)
 
-l_info_pesagem = Label(frame_machos_pesagens,text="")
-l_info_pesagem.place(relwidth=0.3,relx=0.3,rely=0.6)
+l_animal = Label(frame_machos_pesagens,text="Animal",bg="grey")
+l_peso = Label(frame_machos_pesagens,text="Peso",bg="grey")
+
+l_animal.place(relx=0.45,rely=0.45,anchor=CENTER)
+l_peso.place(relx=0.55,rely=0.45,anchor=CENTER)
+
+
+
+#l_info_pesagem = Label(frame_machos_pesagens,text="",bg="grey")
+
+macho.tree_dummy.l_info_pesagem.place(relx=0.5,rely=0.7,anchor=CENTER)
 
 
 
 
-b_inserir_pesagem = Button(frame_machos_pesagens,text="Inserir pesagem",command=lambda : inserir_pesagem())
 
-b_inserir_pesagem.place(relx=0.3,rely=0.3)
+b_inserir_pesagem = Button(frame_machos_pesagens,text="Inserir pesagem",command=lambda : inserir_pesagem(macho))
+b_inserir_pesagem.place(relx=0.5,rely=0.6,anchor=CENTER)
 
 
 data = datetime(2022,10,4)
-def inserir_pesagem():
-    result = macho.inserir_pesagem(data)
+def inserir_pesagem(animal):
+    result = animal.inserir_pesagem(data)
     print(result)
 
 
 
 
-def tree_dummy_handler_animal(e):
+def tree_dummy_handler(e,animal:Animal,tipo:str):
     try:
         animal = int(e_animal.get())
         peso = int(e_peso.get())
         e_peso.delete(0,END)
         e_animal.delete(0,END)
-        macho.tree_dummy.insert_one(animal,peso)
+        insertion_ok = macho.tree_dummy.insert_one(animal,peso)
+        print(insertion_ok)
     except ValueError:
         pass
-    e_peso.focus()
+    if tipo == "animal":
+        e_peso.focus()
+    elif tipo == "peso":
+        e_animal.focus()
 
 
-def tree_dummy_handler_peso(e):
-    try:
-        animal = int(e_animal.get())
-        peso = int(e_peso.get())
-        e_peso.delete(0, END)
-        e_animal.delete(0, END)
-        macho.tree_dummy.insert_one(animal,peso)
-    except ValueError:
-        pass
-    e_animal.focus()
 
 
-def tree_dummy_handler_delete(e):
+def tree_dummy_handler_delete(e,animal):
     was_selected = what_was_selected_tree(e)
     if was_selected[0] == "cell":
         cells= was_selected[1]
-        macho.tree_dummy.delete_list_cells(cells)
+        animal.tree_dummy.delete_list_cells(cells)
 
 
-e_animal.bind("<Return>",tree_dummy_handler_animal)
-e_peso.bind("<Return>",tree_dummy_handler_peso)
-macho.tree_dummy.tree.bind("<Delete>",tree_dummy_handler_delete)
+e_animal.bind("<Return>",lambda e :tree_dummy_handler(e,macho,"animal"))
+e_peso.bind("<Return>",lambda e :tree_dummy_handler(e,macho,"peso"))
+macho.tree_dummy.tree.bind("<Delete>",lambda e :tree_dummy_handler_delete(e,macho))
 
+
+
+cal = Calendar(frame_machos_pesagens,firstweekday="sunday")
+cal.place(relx=0.5,rely=0.15,anchor=CENTER)
 
 
 

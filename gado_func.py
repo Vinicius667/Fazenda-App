@@ -10,15 +10,6 @@ def gotoframe(frame):
     frame.tkraise()
 
 
-def generate_tree(tree, columns, width):
-    tree["columns"] = columns
-    tree.column("#0", width=0, stretch=NO)
-    for col, wid in zip(columns, width):
-        tree.column(col, width=wid, minwidth=wid, anchor=CENTER)
-    tree.heading("#0", text="")
-    for col, wid in zip(columns, width):
-        tree.heading(col, text=col, anchor=CENTER)
-
 
 def what_was_selected_tree(e):
     tree = e.widget
@@ -30,61 +21,6 @@ def what_was_selected_tree(e):
         cells = [int(cell) for cell in tree.selection()]
         return ['cell', cells]
 
-
-def delete_all_tree(tree):
-    tree.delete(*tree.get_children())
-
-
-# apenas para tree que sao preenchicas com listas sem aninhamento eg: tree_dummy_pesos
-'''
-def fill_tree(tree, lista):
-    if len(tree.get_children()) > 0:
-        delete_all_tree(tree)
-    for i, item in enumerate(lista):
-        tree.insert(parent="", index=END, iid=i, values=item)
-
-
-def delete_cells_tree(tree, cells):
-    tree.delete(cells)
-
-
-def delete_list_cells_and_fill_tree(tree, cells, lista):
-    for i in sorted(cells, reverse=True):
-        lista.pop(i)
-    fill_tree(tree, lista)
-
-'''
-
-######### tree_info
-
-
-
-
-
-
-
-# [(animal,peso)] => {animal:[[data,peso]]}
-def dummy_to_data_peso(dummy_animal_peso, animais_data_peso, data):
-    was_conflict = False
-    conflitos = []
-    for animal, peso in dummy_animal_peso:
-        if animal in animais_data_peso.keys():
-            for data_saved, peso_saved in animais_data_peso[animal]:
-                if data_saved == data:
-                    if peso != peso_saved:
-                        was_conflict = True
-                        conflitos.append([animal, peso_saved])
-        else:
-            animais_data_peso[animal] = []
-
-    if not was_conflict:
-        for animal, peso in dummy_animal_peso:
-            animais_data_peso[animal].append((data, peso))
-            animais_data_peso[animal] = sorted(animais_data_peso[animal], reverse=True)
-            print(animal)
-            print(animais_data_peso[animal])
-
-    return [was_conflict, conflitos]
 
 
 def create_screen(root):
@@ -121,6 +57,7 @@ class TreeDummy(MyTree):
 
     def __init__(self, frame):
         self.lista = []
+        self.l_info_pesagem = Label(frame, text="", bg="grey")
         super().__init__(frame)
 
     def fill_tree(self):
@@ -136,9 +73,19 @@ class TreeDummy(MyTree):
         self.fill_tree()
 
     def insert_one(self,animal,peso):
+        if animal in [animal[0] for animal in self.lista]:
+            print("animal já presente")
+            return False
         self.delete_all_tree()
         self.lista.append([animal,peso])
         self.fill_tree()
+        self.update_info()
+        return True
+
+
+    def update_info(self,texto=""):
+        self.l_info_pesagem.config(text=texto)
+
 
 
 class TreeInfo(MyTree):
@@ -195,10 +142,12 @@ class TreeInfo(MyTree):
 
 
 class Animal:
-    def __init__(self,frame_ti,frame_td,animais_data_peso):
-        self.frame_ti= frame_ti
-        self.tree_info = TreeInfo(frame_ti,animais_data_peso)
-        self.tree_dummy = TreeDummy(frame_td)
+    def __init__(self,frame_tree_info,frame_tree_dummy,animais_data_peso):
+        self.frame_tree_info= frame_tree_info
+        self.frame_tree_dummy = frame_tree_dummy
+
+        self.tree_info = TreeInfo(frame_tree_info,animais_data_peso)
+        self.tree_dummy = TreeDummy(frame_tree_dummy)
 
 
 
@@ -220,12 +169,14 @@ class Animal:
                 self.tree_info.animais_data_peso[animal].append((data, peso))
                 self.tree_info.animais_data_peso[animal] = sorted(self.tree_info.animais_data_peso[animal], reverse=True)
                 print(animal)
-        self.tree_info.generate_tree_info()
-        self.tree_info.fill_tree()
-        self.tree_dummy.delete_all_tree()
-        self.tree_dummy.lista = []
-        print(len(self.tree_info.lista))
-        print(len(self.tree_info.lista))
+            self.tree_dummy.update_info(f"Animais inseridos na base de dados: {len(self.tree_dummy.lista)} ")
+            self.tree_info.generate_tree_info()
+            self.tree_info.fill_tree()
+            self.tree_dummy.delete_all_tree()
+            self.tree_dummy.lista = []
+        else:
+            self.tree_dummy.update_info(f"Em {data.strftime('%d/%m/%Y')} houve conflitos {conflitos}")
+
         return [was_conflict, conflitos]
 
 
