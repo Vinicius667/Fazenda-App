@@ -56,9 +56,24 @@ class TreeDummy(MyTree):
     """Controla as treeinfos e a lista das treeinfos"""
 
     def __init__(self, frame):
+        super().__init__(frame)
         self.lista = []
         self.l_info_pesagem = Label(frame, text="", bg="grey")
-        super().__init__(frame)
+        self.generate_tree(("Animal","Peso (kg)"),(50,50))
+        self.sum_tree = ttk.Treeview(frame)
+        self.generate_sum_tree(("Quantidade","Peso total"),(50,50))
+        self.data = False
+        self.l_data_inserida = Label(frame,text="",bg="grey")
+
+
+    def generate_sum_tree(self, columns, width):
+        self.sum_tree["columns"] = columns
+        self.sum_tree.column("#0", width=0, stretch=NO)
+        for col, wid in zip(columns, width):
+            self.sum_tree.column(col, width=wid, minwidth=wid, anchor=CENTER)
+        self.sum_tree.heading("#0", text="")
+        for col, wid in zip(columns, width):
+            self.sum_tree.heading(col, text=col, anchor=CENTER)
 
     def fill_tree(self):
         if len(self.tree.get_children()) > 0:
@@ -74,19 +89,25 @@ class TreeDummy(MyTree):
 
     def insert_one(self,animal,peso):
         if animal in [animal[0] for animal in self.lista]:
-            print("animal já presente")
-            return False
+            self.update_info(f"Animal {animal} já foi adicionado!")
+            return [False,animal]
         self.delete_all_tree()
         self.lista.append([animal,peso])
         self.fill_tree()
         self.update_info()
+        self.update_sum_tree()
         return True
 
 
     def update_info(self,texto=""):
         self.l_info_pesagem.config(text=texto)
 
-
+    def update_sum_tree(self):
+        soma = 0
+        for animal,peso in self.lista:
+            soma += peso
+        self.sum_tree.delete(*self.sum_tree.get_children())
+        self.sum_tree.insert(parent="", index=END, iid=0, values=[len(self.lista),soma])
 
 class TreeInfo(MyTree):
     def __init__(self, frame,animais_data_peso):
@@ -96,6 +117,10 @@ class TreeInfo(MyTree):
         self.generate_tree_info()
         self.tree_info_col_sort = 0
         self.tree_info_reverse_sort = False
+        self.generate_tree(
+            ("Animal", "Peso (kg)", "Ultima pesagem", "Pesagens", "Engorda"),
+            (50, 50, 100, 100, 80))
+        self.fill_tree()
 
 
     def fill_tree(self):
@@ -112,7 +137,7 @@ class TreeInfo(MyTree):
         if self.tree_info_col_sort == col:
             self.tree_info_reverse_sort = not self.tree_info_reverse_sort
         else:
-            self.tree_info_reverse_sort = False
+            self.tree_info_reverse_sort = True
         self.tree_info_col_sort = col
         self.delete_all_tree()
         self.lista= sorted(self.lista, key=lambda x: x[col], reverse=self.tree_info_reverse_sort)
@@ -151,13 +176,13 @@ class Animal:
 
 
 
-    def inserir_pesagem(self,data):
+    def inserir_pesagem(self):
         was_conflict = False
         conflitos = []
         for animal, peso in self.tree_dummy.lista:
             if animal in self.tree_info.animais_data_peso.keys():
                 for data_saved, peso_saved in self.tree_info.animais_data_peso[animal]:
-                    if data_saved == data:
+                    if data_saved == self.tree_dummy.data:
                         if peso != peso_saved:
                             was_conflict = True
                             conflitos.append([animal, peso_saved])
@@ -165,8 +190,11 @@ class Animal:
                 self.tree_info.animais_data_peso[animal] = []
 
         if not was_conflict:
+            if isinstance(self.tree_dummy.data,bool):
+                self.tree_dummy.update_info(f"É necessário escolher uma data para a pesagem.")
+                return [True]
             for animal, peso in self.tree_dummy.lista:
-                self.tree_info.animais_data_peso[animal].append((data, peso))
+                self.tree_info.animais_data_peso[animal].append((self.tree_dummy.data, peso))
                 self.tree_info.animais_data_peso[animal] = sorted(self.tree_info.animais_data_peso[animal], reverse=True)
                 print(animal)
             self.tree_dummy.update_info(f"Animais inseridos na base de dados: {len(self.tree_dummy.lista)} ")
@@ -174,6 +202,9 @@ class Animal:
             self.tree_info.fill_tree()
             self.tree_dummy.delete_all_tree()
             self.tree_dummy.lista = []
+            self.tree_dummy.update_sum_tree()
+            self.tree_dummy.data = False
+            self.tree_dummy.l_data_inserida.config(text="")
         else:
             self.tree_dummy.update_info(f"Em {data.strftime('%d/%m/%Y')} houve conflitos {conflitos}")
 
@@ -196,7 +227,7 @@ if __name__ == "__main__":
 
 
     macho.tree_info.generate_tree(
-        ("Animal", "Peso", "Ultima pesagem", "Pesagens", "Engorda"),
+        ("Animal", "Peso (kg)", "Ultima pesagem", "Pesagens", "Engorda"),
         (50, 50, 100, 100, 80))
 
     macho.tree_info.fill_tree()
@@ -204,3 +235,54 @@ if __name__ == "__main__":
     macho.tree_info.sort_by_heading(2)
 
     root.mainloop()
+
+
+def tree_info_handler(e,animal):
+    was_selected = what_was_selected_tree(e)
+    regiao = was_selected[0]
+    if regiao == 'heading':
+        coluna = was_selected[1]
+        coluna = int(coluna[1:])-1
+        animal.tree_info.sort_by_heading(coluna)
+    elif regiao == "cell":
+        cells = was_selected[1]
+        tree_info_selected(cells,animal)
+
+def tree_info_selected(cells_selected,animal):
+    print(f"The animal selected was {cells_selected}")
+
+
+def inserir_pesagem(animal):
+    insertion_ok = animal.inserir_pesagem()[0]
+
+
+
+def tree_dummy_handler(e,animal,tipo,e_animal,e_peso):
+    try:
+        entrada_animal = e_animal.get()
+        entrada_peso = e_peso.get()
+        value_animal = int(entrada_animal)
+        valie_peso = float(entrada_peso)
+        e_peso.delete(0,END)
+        e_animal.delete(0,END)
+        insertion_ok = animal.tree_dummy.insert_one(value_animal,valie_peso)
+    except ValueError:
+        if entrada_animal != "" and entrada_peso != "":
+            animal.tree_dummy.update_info("Animal e peso devem ser números.")
+    if tipo == "animal":
+        e_peso.focus()
+    elif tipo == "peso":
+        e_animal.focus()
+
+
+def tree_dummy_handler_delete(e,animal):
+    was_selected = what_was_selected_tree(e)
+    if was_selected[0] == "cell":
+        cells= was_selected[1]
+        animal.tree_dummy.delete_list_cells(cells)
+
+
+def update_pesagens_frame(e,animal):
+    animal.tree_dummy.update_info("")
+    animal.tree_dummy.update_sum_tree()
+
