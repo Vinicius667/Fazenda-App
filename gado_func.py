@@ -34,6 +34,8 @@ def create_screen(root):
     root.columnconfigure(0, weight=1)
 
 
+
+
 class MyTree():
     """Funções comuns para todas as trees"""
     def __init__(self, frame):
@@ -50,6 +52,20 @@ class MyTree():
 
     def delete_all_tree(self):
         self.tree.delete(*self.tree.get_children())
+
+
+class TreeEdit(MyTree):
+    def __init__(self,frame,animal_):
+        super().__init__(frame)
+        self.animal_ = animal_
+        self.l_info_pesagem = Label(frame, text="", bg="grey")
+        self.generate_tree(("Animal","Peso (kg)"),(50,80))
+        self.data = False
+        self.l_data_inserida = Label(frame,text="",bg="grey")
+
+
+
+
 
 
 class TreeDummy(MyTree):
@@ -77,7 +93,7 @@ class TreeDummy(MyTree):
 
     def fill_tree(self):
         if len(self.tree.get_children()) > 0:
-            delete_all_tree(self.tree)
+            self.tree.delete_all_tree()
         for i, item in enumerate(self.lista):
             self.tree.insert(parent="", index=END, iid=i, values=item)
 
@@ -110,9 +126,10 @@ class TreeDummy(MyTree):
         self.sum_tree.insert(parent="", index=END, iid=0, values=[len(self.lista),soma])
 
 class TreeInfo(MyTree):
-    def __init__(self, frame,animais_data_peso):
+    def __init__(self, frame,animal_):
         super().__init__(frame)
-        self.animais_data_peso = animais_data_peso
+        self.animal_ = animal_
+        #self.animais_data_peso = animais_data_peso
         self.lista = []
         self.generate_tree_info()
         self.tree_info_col_sort = 0
@@ -122,6 +139,10 @@ class TreeInfo(MyTree):
             (50, 50, 100, 100, 80))
         self.fill_tree()
 
+
+    @property
+    def animais_data_peso(self):
+        return self.animal_.animais_data_peso
 
     def fill_tree(self):
         self.delete_all_tree()
@@ -149,7 +170,7 @@ class TreeInfo(MyTree):
             self.lista = []
         except AttributeError:
             pass
-        for animal in self.animais_data_peso:
+        for animal in self.animal_.animais_data_peso:
             self.lista.append([animal, 0, datetime(1900, 1, 1, 0, 0), 0, "Não"])
 
         self.lista.sort()
@@ -167,13 +188,14 @@ class TreeInfo(MyTree):
 
 
 class Animal:
-    def __init__(self,frame_tree_info,frame_tree_dummy,animais_data_peso):
+    def __init__(self,frame_tree_info,frame_tree_dummy,frame_tree_edit,animais_data_peso,all_datas):
         self.frame_tree_info= frame_tree_info
         self.frame_tree_dummy = frame_tree_dummy
-
-        self.tree_info = TreeInfo(frame_tree_info,animais_data_peso)
+        self.animais_data_peso = animais_data_peso
+        self.tree_info = TreeInfo(frame_tree_info,self)
         self.tree_dummy = TreeDummy(frame_tree_dummy)
-
+        self.all_datas = all_datas
+        self.tree_edit = TreeEdit(frame_tree_edit,self)
 
 
     def inserir_pesagem(self):
@@ -205,8 +227,10 @@ class Animal:
             self.tree_dummy.update_sum_tree()
             self.tree_dummy.data = False
             self.tree_dummy.l_data_inserida.config(text="")
+            if not (self.tree_dummy.data in self.all_datas):
+                self.all_datas.append(self.tree_dummy.data)
         else:
-            self.tree_dummy.update_info(f"Em {data.strftime('%d/%m/%Y')} houve conflitos {conflitos}")
+            self.tree_dummy.update_info(f"Em {self.tree_dummy.data.strftime('%d/%m/%Y')} houve conflitos {conflitos}")
 
         return [was_conflict, conflitos]
 

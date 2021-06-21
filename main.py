@@ -30,7 +30,7 @@ root.columnconfigure(0,weight=1)
 frame_machos_pesagens = Frame(root,bg="grey")
 frame_menu = Frame(root,bg="red")
 frame_machos_dados = Frame(root,bg="green")
-frame_editar_pesagens = Frame(root,bg="black")
+frame_editar_pesagens = Frame(root,bg="blue")
 
 
 frames = (frame_machos_dados,frame_machos_pesagens,frame_editar_pesagens,frame_menu)
@@ -81,7 +81,7 @@ for frame in frames:
 
 #########################  frame_machos_pesagens
 
-macho = Animal(lf_todos_animais,frame_machos_pesagens,animais_data_peso)
+macho = Animal(lf_todos_animais,frame_machos_pesagens,frame_editar_pesagens,animais_data_peso,all_datas)
 macho.tree_dummy.tree.place(relwidth=0.2,relheight=0.9,relx=0.0,rely=0.0)
 macho.tree_dummy.sum_tree.place(relwidth=0.2,relheight=0.1,relx=0.0,rely=0.9)
 macho.tree_dummy.l_info_pesagem.place(relx=0.5,rely=0.7,anchor=CENTER)
@@ -109,15 +109,19 @@ l_peso.place(relx=0.55,rely=0.55,anchor=CENTER)
 #l_data_inserida = Label(frame_machos_pesagens,text="",bg="grey")
 macho.tree_dummy.l_data_inserida.place(relx=0.5,rely=0.4,anchor=CENTER)
 
-def data_selecionada(cal,animal):
+def cal2date(cal):
     dia,mes,ano = [int(el) for el in cal.get_date().split("/")]
-    data = datetime(ano+2000,mes,dia)
+    data = datetime(ano,mes,dia)
+    return  data
+
+def data_selecionada_dummy(cal,animal):
+    data = cal2date(cal)
     animal.tree_dummy.data = data
     animal.tree_dummy.l_data_inserida.config(text=data.strftime("%d/%m/%y"))
 
 
-b_selecionar_data = Button(frame_machos_pesagens,text="Seleciona data",command= lambda : data_selecionada(cal,macho))
-b_selecionar_data.place(relx=0.5,rely=0.35,anchor=CENTER)
+b_selecionar_data_dummy = Button(frame_machos_pesagens,text="Seleciona data",command= lambda : data_selecionada_dummy(cal,macho))
+b_selecionar_data_dummy.place(relx=0.5,rely=0.35,anchor=CENTER)
 
 
 
@@ -129,10 +133,28 @@ e_peso.bind("<Return>",lambda e :tree_dummy_handler(e,macho,"peso",e_animal,e_pe
 macho.tree_dummy.tree.bind("<Delete>",lambda e :tree_dummy_handler_delete(e,macho))
 
 
-
-
-
 b_pesagens.bind('<Button-1>',lambda e : update_pesagens_frame(e,macho))
+
+
+#########################  frame_editar_pesagens
+cal2 = Calendar(frame_editar_pesagens,firstweekday="sunday",showweeknumbers=False,locale="pt_BR")
+macho.tree_edit.tree.pack()
+
+b_selecionar_data_edit = Button(frame_editar_pesagens,text="Seleciona data",command= lambda : data_selecionada_edit(cal2,macho))
+b_selecionar_data_edit.pack()
+
+
+
+
+cal2.pack()
+macho.tree_edit.l_data_inserida.pack()
+def data_selecionada_edit(cal,animal):
+    data = cal2date(cal)
+    animal.tree_edit.data = data
+    animal.tree_edit.l_data_inserida.config(text=data.strftime("%d/%m/%y"))
+
+
+
 
 root.mainloop()
 
