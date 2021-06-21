@@ -148,8 +148,10 @@ b_selecionar_data_edit.pack()
 
 cal2.pack()
 macho.tree_edit.l_data_inserida.pack()
-def data_selecionada_edit(cal,animal):
-    data = cal2date(cal)
+macho.tree_edit.optionmenu.pack()
+
+def data_selecionada_edit(cal2,animal):
+    data = cal2date(cal2)
     animal.tree_edit.data = data
     animal.tree_edit.l_data_inserida.config(text=data.strftime("%d/%m/%y"))
 

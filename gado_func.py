@@ -62,6 +62,21 @@ class TreeEdit(MyTree):
         self.generate_tree(("Animal","Peso (kg)"),(50,80))
         self.data = False
         self.l_data_inserida = Label(frame,text="",bg="grey")
+        self.stringvar = StringVar(frame)
+        self.stringvar.set("Selecione uma data")
+        self.optionmenu = OptionMenu(frame, self.stringvar, *["Selecione uma data"])
+        self.update_option_menu()
+
+    def update_option_menu(self):
+        self.optionmenu['menu'].delete(0, 'end')
+        for datetime in self.animal_.all_datas:
+            data = datetime.strftime("%d/%m/%Y")
+            self.optionmenu['menu'].add_command(label=data,command=lambda value=data: self.stringvar.set(value))
+
+
+
+    def delete_cells(self):
+        pass
 
 
 
@@ -124,6 +139,10 @@ class TreeDummy(MyTree):
             soma += peso
         self.sum_tree.delete(*self.sum_tree.get_children())
         self.sum_tree.insert(parent="", index=END, iid=0, values=[len(self.lista),soma])
+
+
+    def pack_on_frame(self):
+        pass
 
 class TreeInfo(MyTree):
     def __init__(self, frame,animal_):
