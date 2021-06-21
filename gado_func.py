@@ -4,6 +4,7 @@ from tkinter import ttk
 import pickle
 from datetime import *
 import excel_handler
+from tkcalendar import *
 
 
 def gotoframe(frame):
@@ -95,7 +96,24 @@ class TreeDummy(MyTree):
         self.generate_sum_tree(("Quantidade","Peso total"),(50,50))
         self.data = False
         self.l_data_inserida = Label(frame,text="",bg="grey")
+        self.e_animal = Entry(frame)
+        self.e_peso = Entry(frame)
+        self.l_animal = Label(frame, text="Animal", bg="grey")
+        self.l_peso = Label(frame, text="Peso", bg="grey")
+        self.cal = Calendar(frame, firstweekday="sunday", showweeknumbers=False, locale="pt_BR")
+        self.pack_on_frame()
 
+        
+    def pack_on_frame(self):
+        self.tree.place(relwidth=0.2, relheight=0.9, relx=0.0, rely=0.0)
+        self.sum_tree.place(relwidth=0.2, relheight=0.1, relx=0.0, rely=0.9)
+        self.l_info_pesagem.place(relx=0.5, rely=0.7, anchor=CENTER)
+        self.e_animal.place(relwidth=0.05, relx=0.45, rely=0.6, anchor=CENTER)
+        self.e_peso.place(relwidth=0.05, relx=0.55, rely=0.6, anchor=CENTER)
+        self.cal.place(relx=0.5, rely=0.15, anchor=CENTER)
+        self.l_animal.place(relx=0.45, rely=0.55, anchor=CENTER)
+        self.l_peso.place(relx=0.55, rely=0.55, anchor=CENTER)
+        self.l_data_inserida.place(relx=0.5, rely=0.4, anchor=CENTER)
 
     def generate_sum_tree(self, columns, width):
         self.sum_tree["columns"] = columns
@@ -141,8 +159,8 @@ class TreeDummy(MyTree):
         self.sum_tree.insert(parent="", index=END, iid=0, values=[len(self.lista),soma])
 
 
-    def pack_on_frame(self):
-        pass
+
+
 
 class TreeInfo(MyTree):
     def __init__(self, frame,animal_):
