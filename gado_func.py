@@ -41,18 +41,25 @@ class MyTree():
     """Funções comuns para todas as trees"""
     def __init__(self, frame):
         self.tree = ttk.Treeview(frame)
-
-    def generate_tree(self, columns, width):
-        self.tree["columns"] = columns
-        self.tree.column("#0", width=0, stretch=NO)
+    
+    @staticmethod
+    def generate_tree(tree,columns, width):
+        tree["columns"] = columns
+        tree.column("#0", width=0, stretch=NO)
         for col, wid in zip(columns, width):
-            self.tree.column(col, width=wid, minwidth=wid, anchor=CENTER)
-        self.tree.heading("#0", text="")
+            tree.column(col, width=wid, minwidth=wid, anchor=CENTER)
+        tree.heading("#0", text="")
         for col, wid in zip(columns, width):
-            self.tree.heading(col, text=col, anchor=CENTER)
+            tree.heading(col, text=col, anchor=CENTER)
 
     def delete_all_tree(self):
         self.tree.delete(*self.tree.get_children())
+
+    @staticmethod
+    def cal2date(cal):
+        dia, mes, ano = [int(el) for el in cal.get_date().split("/")]
+        data = datetime(ano, mes, dia)
+        return data
 
 
 class TreeEdit(MyTree):
@@ -60,21 +67,59 @@ class TreeEdit(MyTree):
         super().__init__(frame)
         self.animal_ = animal_
         self.l_info_pesagem = Label(frame, text="", bg="grey")
-        self.generate_tree(("Animal","Peso (kg)"),(50,80))
+        self.generate_tree(self.tree,("Animal","Peso (kg)"),(50,80))
         self.data = False
         self.l_data_inserida = Label(frame,text="",bg="grey")
         self.stringvar = StringVar(frame)
         self.stringvar.set("Selecione uma data")
         self.optionmenu = OptionMenu(frame, self.stringvar, *["Selecione uma data"])
         self.update_option_menu()
+        self.cal = Calendar(frame, firstweekday="sunday", showweeknumbers=False, locale="pt_BR")
+        self.b_selecionar_data_edit = Button(frame,text="Seleciona data",command= lambda : self.data_selecionada_edit())
+        self.pack_on_frame()
+        self.dummy_lista = []
+
+    def data_selecionada_edit(self):
+        self.data = self.cal2date(self.cal)
+        self.l_data_inserida.config(text=self.data.strftime("%d/%m/%y"))
+        
+    def pack_on_frame(self):
+        self.l_data_inserida.pack()
+        self.optionmenu.pack()
+        self.tree.pack()
+        self.b_selecionar_data_edit.pack()
+        self.cal.pack()
+        self.stringvar.trace("w",self.update_tree)
+        self.tree.bind("<Delete>", lambda e: self.tree_dummy_handler_delete(e))
+
+    def tree_dummy_handler_delete(self,e):
+        was_selected = what_was_selected_tree(e)
+        if was_selected[0] == "cell":
+            cells = was_selected[1]
+            self.delete_list_cells(cells)
 
     def update_option_menu(self):
         self.optionmenu['menu'].delete(0, 'end')
-        for datetime in self.animal_.all_datas:
-            data = datetime.strftime("%d/%m/%Y")
+        for date in self.animal_.all_datas:
+            data = date.strftime("%d/%m/%Y")
             self.optionmenu['menu'].add_command(label=data,command=lambda value=data: self.stringvar.set(value))
 
 
+    def update_tree(self,*args):
+        d,m,a= [int(el) for el in self.stringvar.get().split("/")]
+        data = datetime(a,m,d)
+        for animal,data_peso_ in self.animal_.animais_data_peso.items():
+            for i, data_peso in enumerate(data_peso_):
+                if data == data_peso[0]:
+                    self.dummy_lista.append([animal,data_peso[1],i])
+        self.fill_tree()
+
+    def fill_tree(self):
+        self.delete_all_tree()
+        i = 0
+        for animal,peso,index in self.dummy_lista:
+            self.tree.insert(parent="", index=END, iid=i, values=[animal,peso])
+            i+=1
 
     def delete_cells(self):
         pass
@@ -87,13 +132,14 @@ class TreeEdit(MyTree):
 class TreeDummy(MyTree):
     """Controla as treeinfos e a lista das treeinfos"""
 
-    def __init__(self, frame):
+    def __init__(self, frame,animal_):
         super().__init__(frame)
+        self.animal_ = animal_
         self.lista = []
         self.l_info_pesagem = Label(frame, text="", bg="grey")
-        self.generate_tree(("Animal","Peso (kg)"),(50,50))
+        self.generate_tree(self.tree,("Animal","Peso (kg)"),(50,50))
         self.sum_tree = ttk.Treeview(frame)
-        self.generate_sum_tree(("Quantidade","Peso total"),(50,50))
+        self.generate_tree(self.sum_tree,("Quantidade","Peso total"),(50,50))
         self.data = False
         self.l_data_inserida = Label(frame,text="",bg="grey")
         self.e_animal = Entry(frame)
@@ -101,9 +147,17 @@ class TreeDummy(MyTree):
         self.l_animal = Label(frame, text="Animal", bg="grey")
         self.l_peso = Label(frame, text="Peso", bg="grey")
         self.cal = Calendar(frame, firstweekday="sunday", showweeknumbers=False, locale="pt_BR")
+        self.b_pesagens = Button(frame,text="Pesagens",padx=30,pady=30,command=lambda:gotoframe(frame))
+        self.b_selecionar_data_dummy = Button(frame,text="Seleciona data",command=  self.data_selecionada_dummy)
+        self.b_inserir_pesagem = Button(frame,text="Inserir pesagem",command=self.animal_.inserir_pesagem)
         self.pack_on_frame()
 
-        
+    def data_selecionada_dummy(self):
+        data = self.cal2date(self.cal)
+        self.data = data
+        self.l_data_inserida.config(text=data.strftime("%d/%m/%y"))
+
+
     def pack_on_frame(self):
         self.tree.place(relwidth=0.2, relheight=0.9, relx=0.0, rely=0.0)
         self.sum_tree.place(relwidth=0.2, relheight=0.1, relx=0.0, rely=0.9)
@@ -114,15 +168,42 @@ class TreeDummy(MyTree):
         self.l_animal.place(relx=0.45, rely=0.55, anchor=CENTER)
         self.l_peso.place(relx=0.55, rely=0.55, anchor=CENTER)
         self.l_data_inserida.place(relx=0.5, rely=0.4, anchor=CENTER)
+        self.b_selecionar_data_dummy.place(relx=0.5, rely=0.35, anchor=CENTER)
+        self.b_inserir_pesagem.place(relx=0.5, rely=0.65, anchor=CENTER)
+        self.e_animal.bind("<Return>", lambda e: self.tree_dummy_handler(e, "animal"))
+        self.e_peso.bind("<Return>", lambda e: self.tree_dummy_handler(e, "peso",))
+        self.tree.bind("<Delete>", lambda e: self.tree_dummy_handler_delete(e))
 
-    def generate_sum_tree(self, columns, width):
-        self.sum_tree["columns"] = columns
-        self.sum_tree.column("#0", width=0, stretch=NO)
-        for col, wid in zip(columns, width):
-            self.sum_tree.column(col, width=wid, minwidth=wid, anchor=CENTER)
-        self.sum_tree.heading("#0", text="")
-        for col, wid in zip(columns, width):
-            self.sum_tree.heading(col, text=col, anchor=CENTER)
+    def tree_dummy_handler_delete(self,e):
+        was_selected = what_was_selected_tree(e)
+        if was_selected[0] == "cell":
+            cells = was_selected[1]
+            self.delete_list_cells(cells)
+
+    def tree_dummy_handler(self, e, tipo):
+        try:
+            entrada_animal = self.e_animal.get()
+            entrada_peso = self.e_peso.get()
+            value_animal = int(entrada_animal)
+            valie_peso = float(entrada_peso)
+            self.e_peso.delete(0, END)
+            self.e_animal.delete(0, END)
+            insertion_ok = self.insert_one(value_animal, valie_peso)
+        except ValueError:
+            if entrada_animal != "" and entrada_peso != "":
+                self.update_info("Animal e peso devem ser números.")
+        if tipo == "animal":
+            self.e_peso.focus()
+        elif tipo == "peso":
+            self.e_animal.focus()
+
+
+            
+    def update_pesagens_frame(self,e):
+        self.update_info("")
+        self.update_sum_tree()
+
+
 
     def fill_tree(self):
         if len(self.tree.get_children()) > 0:
@@ -164,19 +245,31 @@ class TreeDummy(MyTree):
 
 class TreeInfo(MyTree):
     def __init__(self, frame,animal_):
-        super().__init__(frame)
+        self.lf_todos_animais = LabelFrame(frame, text="Todos animais", bg="pink")
+        self.frame = frame
+        super().__init__(self.lf_todos_animais)
         self.animal_ = animal_
-        #self.animais_data_peso = animais_data_peso
         self.lista = []
         self.generate_tree_info()
         self.tree_info_col_sort = 0
         self.tree_info_reverse_sort = False
-        self.generate_tree(
+        self.generate_tree(self.tree,
             ("Animal", "Peso (kg)", "Ultima pesagem", "Pesagens", "Engorda"),
             (50, 50, 100, 100, 80))
         self.fill_tree()
-
-
+        self.lf_pesquisa_animal = LabelFrame(frame, text="Pesquisar animal")
+        self.e_pesquisa_animal = Entry(self.lf_pesquisa_animal, text="Animal a ser pesquisado (Ex: 71)", width=15, font=60)
+        self.b_pesquisa_animal = Button(self.lf_pesquisa_animal, text="Pesquisar")
+        self.lf_animal_info = LabelFrame(frame, text="Informações do animal", bg="red")
+        self.pack_on_frame()
+        
+    def pack_on_frame(self):
+        self.lf_animal_info.place(relwidth=0.6, relheight=1, relx=0.4)
+        self.lf_pesquisa_animal.place(relwidth=0.4, relheight=0.1)
+        self.lf_todos_animais.place(relwidth=0.4, relheight=0.9, rely=0.1)
+        self.e_pesquisa_animal.grid(row=0, column=1, padx=20, pady=20)
+        self.b_pesquisa_animal.grid(row=0, column=2, padx=20, pady=20)
+        self.tree.place(relwidth=1, relheight=0.9, rely=0.1)
     @property
     def animais_data_peso(self):
         return self.animal_.animais_data_peso
@@ -230,7 +323,7 @@ class Animal:
         self.frame_tree_dummy = frame_tree_dummy
         self.animais_data_peso = animais_data_peso
         self.tree_info = TreeInfo(frame_tree_info,self)
-        self.tree_dummy = TreeDummy(frame_tree_dummy)
+        self.tree_dummy = TreeDummy(frame_tree_dummy,self)
         self.all_datas = all_datas
         self.tree_edit = TreeEdit(frame_tree_edit,self)
 
@@ -272,30 +365,6 @@ class Animal:
         return [was_conflict, conflitos]
 
 
-if __name__ == "__main__":
-    animais_data_peso = pickle.load(open("animais_data_peso.pkl", "rb"))
-    animais_data_peso = {200: animais_data_peso[200], 216: animais_data_peso[216]}
-    animais_tree_info = []
-    animais_tree_info = excel_handler.generate_tree_info(animais_data_peso, animais_tree_info)
-
-
-    root = Tk()
-    create_screen(root)
-    frame = Frame(root,bg="pink")
-    frame.grid(row=0, column=0, sticky="nsew")
-
-    macho = Animal(frame,frame,animais_tree_info)
-
-
-    macho.tree_info.generate_tree(
-        ("Animal", "Peso (kg)", "Ultima pesagem", "Pesagens", "Engorda"),
-        (50, 50, 100, 100, 80))
-
-    macho.tree_info.fill_tree()
-    macho.tree_info.tree.pack()
-    macho.tree_info.sort_by_heading(2)
-
-    root.mainloop()
 
 
 def tree_info_handler(e,animal):
@@ -318,32 +387,10 @@ def inserir_pesagem(animal):
 
 
 
-def tree_dummy_handler(e,animal,tipo,e_animal,e_peso):
-    try:
-        entrada_animal = e_animal.get()
-        entrada_peso = e_peso.get()
-        value_animal = int(entrada_animal)
-        valie_peso = float(entrada_peso)
-        e_peso.delete(0,END)
-        e_animal.delete(0,END)
-        insertion_ok = animal.tree_dummy.insert_one(value_animal,valie_peso)
-    except ValueError:
-        if entrada_animal != "" and entrada_peso != "":
-            animal.tree_dummy.update_info("Animal e peso devem ser números.")
-    if tipo == "animal":
-        e_peso.focus()
-    elif tipo == "peso":
-        e_animal.focus()
 
 
-def tree_dummy_handler_delete(e,animal):
-    was_selected = what_was_selected_tree(e)
-    if was_selected[0] == "cell":
-        cells= was_selected[1]
-        animal.tree_dummy.delete_list_cells(cells)
 
 
-def update_pesagens_frame(e,animal):
-    animal.tree_dummy.update_info("")
-    animal.tree_dummy.update_sum_tree()
+
+
 
