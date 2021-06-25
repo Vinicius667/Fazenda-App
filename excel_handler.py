@@ -75,17 +75,18 @@ if __name__ == "__main__":
     for j in range(len(all_datas)):
       peso = sheet[get_column_letter(col_data) + str(row)].value
       col_data += 2
+      data = all_datas[j]
+      animal = all_animais[i]
       if peso and not isinstance(peso, str):
-        if not tem_pesagem:
-          animais_data_peso[all_animais[i]] = []
-          tem_pesagem = True
-        animais_data_peso[all_animais[i]].append((all_datas[j], peso))
-      if tem_pesagem:
-        animais_data_peso[all_animais[i]] = sorted(animais_data_peso[all_animais[i]], reverse=True)
+        try:
+          animais_data_peso[animal][data] = peso
+        except KeyError:
+          animais_data_peso[animal] = {}
+          animais_data_peso[animal][data] = peso
     row += 1
 
 
-  animais_tree_info = generate_tree_info(animais_data_peso)
+  #animais_tree_info = generate_tree_info(animais_data_peso)
 
   file = open("animais_data_peso.pkl","wb")
   pickle.dump(animais_data_peso,file)
@@ -99,6 +100,3 @@ if __name__ == "__main__":
   pickle.dump(all_datas,file)
   file.close()
 
-  file = open("animais_tree_info.pkl","wb")
-  pickle.dump(animais_tree_info,file)
-  file.close()
