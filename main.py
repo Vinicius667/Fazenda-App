@@ -6,15 +6,18 @@ from datetime import *
 import excel_handler
 from gado_func import *
 from tkcalendar import *
+from tkinter import messagebox
+from ttkthemes import ThemedTk,THEMES
 
 
 
-#all_animais = pickle.load(open("all_animais.pkl","rb"))
+
 all_datas = pickle.load(open("all_datas.pkl","rb"))
-animais_data_peso = pickle.load(open("animais_data_peso.pkl","rb"))
-#animais_data_peso = {200:animais_data_peso[200],216:animais_data_peso[216]}
+animais_info = pickle.load(open("animais_info.pkl","rb"))
 
-root = Tk()
+#root = Tk()
+root = ThemedTk()
+root.set_theme("elegance")
 root.title("Controle Fazenda")
 root.iconbitmap("cow.ico")
 root.state("zoomed")
@@ -27,7 +30,8 @@ root.rowconfigure(0,weight=1)
 root.columnconfigure(0,weight=1)
 
 
-macho = Animal(root,animais_data_peso,all_datas)
+
+macho = Animal(root,animais_info,all_datas)
 
 
 
